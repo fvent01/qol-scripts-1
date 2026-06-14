@@ -1,106 +1,285 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# V1.0.1
-# TODO: Add a check to make sure that the user has all dependent programs to run
-# the script. If the user does not have the required dependent programs, offer to
-# have the script install them, or update them.
+# ==========================================================
 
-# Function to check if a command is available.
+# Django Project Generator
+
+# Version: 3.0.0
+
+# Author: Francois Ernst Venter
+
+# ==========================================================
+
+set -euo pipefail
+
+# ----------------------------------------------------------
+
+# Functions
+
+# ----------------------------------------------------------
 
 command_exists() {
-  command -v \$1 >/dev/null 2>$1
+command -v "$1" >/dev/null 2>&1
 }
 
-# Ask the user for the name of the project.
-echo "Enter a name for you Django project:"
-read ProjectName
+error_exit() {
+echo "❌ ERROR: $1"
+exit 1
+}
 
-# Check if the directory .venvs exists.
-if [ ! -d "./.venvs" ]; then
-  # If not, then ask the use rif they want to create the directory.
-  while true; do
-    echo ".venvs directory does not exist."
-    echo "Do you want to create it? (yes|no)"
-    read answer
+success() {
+echo "✅ $1"
+}
 
-  # If the answer is yes, then create the directory and break the loop.
-    if [ "$answer" = "yes" ]; then
-      mkdir ./.venvs
-      break
-    elif [ "$answer" = "no" ]; then
-      # If the answer is no, then exit the script.
-      echo ".venvs directory is required."
-      clear
-      echo "Exiting..."
-      exit 1
-    else
-      echo "Invalid input."
-      echo "Please answer only yes or no."
-    fi
-done
+# ----------------------------------------------------------
+
+# Prerequisites
+
+# ----------------------------------------------------------
+
+clear
+echo "======================================"
+echo "      Django Project Generator"
+echo "======================================"
+echo
+
+command_exists python3 || error_exit "Python3 is not installed."
+
+# ----------------------------------------------------------
+
+# Project Name
+
+# ----------------------------------------------------------
+
+while true; do
+read -rp "Enter Django project name: " ProjectName
+
+```
+if [[ -z "$ProjectName" ]]; then
+    echo "Project name cannot be empty."
+    continue
 fi
 
-clear
+if [[ "$ProjectName" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    break
+fi
 
-# Navigate to the directory where you want to create the virtual environment
-echo "Entering '.venv' Directory..."
-cd ./.venvs/
+echo "Use only letters, numbers, underscores and hyphens."
+```
 
-# Create the virtual environment
-clear && echo "Creating the virtual environment '$ProjectName'..."
-python3 -m venv ./$ProjectName
-clear && echo "The virtual environment $ProjectName has been created."
+done
 
-# Activate the virtual environment
-cd $ProjectName
-clear && echo "Activating " && source ./bin/activate
+# ----------------------------------------------------------
 
-# Update PIP so not to run into funny business.
-echo "Updating PIP..."
-python3 -m pip install --upgrade pip
-clear && echo "PIP has finished updating..."
+# Virtual Environment Folder
+
+# ----------------------------------------------------------
+
+mkdir -p .venvs
+
+if [ -d ".venvs/$ProjectName" ]; then
+error_exit "Virtual environment already exists."
+fi
+
+if [ -d "$ProjectName" ]; then
+error_exit "Project directory already exists."
+fi
+
+# ----------------------------------------------------------
+
+# Create Virtual Environment
+
+# ----------------------------------------------------------
+
+echo
+echo "🏗️ Creating virtual environment..."
+
+python3 -m venv ".venvs/$ProjectName"
+
+success "Virtual environment created."
+
+# ----------------------------------------------------------
+
+# Activate Environment
+
+# ----------------------------------------------------------
+
+# shellcheck disable=SC1091
+
+source ".venvs/$ProjectName/bin/activate"
+
+success "Environment activated."
+
+# ----------------------------------------------------------
+
+# Update Python Tooling
+
+# ----------------------------------------------------------
+
+echo
+echo "📦 Updating Python tools..."
+
+python -m pip install --upgrade 
+pip 
+setuptools 
+wheel
+
+success "Python tools updated."
+
+# ----------------------------------------------------------
 
 # Install Django
-echo "Installing Django..."
-pip install django -v
-clear && echo "Django installed..."
 
-# Go back to the root folder.
-cd ..
-cd ..
+# ----------------------------------------------------------
 
-# Create the Django project
-echo "Creating project: $ProjectName ..."
-django-admin startproject $ProjectName
+echo
+echo "📦 Installing Django..."
 
-#Enter project folder.
-cd ./$ProjectName/$ProjectName
+pip install django
 
-clear && echo "Creating folder structure..."
-echo " Making   file: requirements.txt" && touch requirements.txt  #  TODO: Add requirments to file auto-magicaly.
-echo " Making folder: apps" && mkdir ./apps # TODO: Add base files to folders? --V
-echo " Making folder: static " && mkdir ./static
-echo " Making folder: media" && mkdir ./media
-echo " Making folder: tempalates" && mkdir ./templates
+success "Django installed."
 
-clear
+# ----------------------------------------------------------
 
-echo "/$ProjectName/"
-echo "|-- manage.py"
-echo "|-- $ProjectName"
-echo "    |-- asgi.py"
-echo "    |-- __init__.py"
-echo "    |-- settings.py"
-echo "    |-- urls.py"
-echo "    |-- wsgi.py"
-echo "|-- requirements.txt"
-echo "|-- apps/"
-echo "|-- static/"
-echo "|-- media/"
-echo "|-- templates/"
-echo ""
-echo "Congrats! Django has successfully installed."
-echo ""
-echo "Program written by:"
-echo "Francois Ernst Venter 8/8/2023"
-echo ""
+# Create Project
+
+# ----------------------------------------------------------
+
+echo
+echo "🏗️ Creating Django project..."
+
+django-admin startproject "$ProjectName"
+
+success "Project created."
+
+# ----------------------------------------------------------
+
+# Enter Project Root
+
+# ----------------------------------------------------------
+
+cd "$ProjectName"
+
+# ----------------------------------------------------------
+
+# Create Folder Structure
+
+# ----------------------------------------------------------
+
+echo
+echo "📁 Creating project folders..."
+
+mkdir -p apps
+mkdir -p templates/includes
+mkdir -p static/css
+mkdir -p static/js
+mkdir -p static/images
+mkdir -p media
+mkdir -p logs
+
+success "Folder structure created."
+
+# ----------------------------------------------------------
+
+# Create requirements.txt
+
+# ----------------------------------------------------------
+
+pip freeze > requirements.txt
+
+success "requirements.txt created."
+
+# ----------------------------------------------------------
+
+# Create .gitignore
+
+# ----------------------------------------------------------
+
+cat > .gitignore <<EOF
+**pycache**/
+*.pyc
+*.sqlite3
+
+media/
+logs/
+
+.env
+
+.vscode/
+.idea/
+
+.venvs/
+EOF
+
+success ".gitignore created."
+
+# ----------------------------------------------------------
+
+# Create .env
+
+# ----------------------------------------------------------
+
+cat > .env <<EOF
+DEBUG=True
+SECRET_KEY=CHANGE_ME
+ALLOWED_HOSTS=localhost,127.0.0.1
+EOF
+
+success ".env created."
+
+# ----------------------------------------------------------
+
+# Create Base Template
+
+# ----------------------------------------------------------
+
+cat > templates/base.html <<EOF
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Django App{% endblock %}</title>
+</head>
+<body>
+
+{% block content %}
+{% endblock %}
+
+</body>
+</html>
+EOF
+
+success "base.html created."
+
+# ----------------------------------------------------------
+
+# Summary
+
+# ----------------------------------------------------------
+
+echo
+echo "======================================"
+echo "🎉 Project Created Successfully!"
+echo "======================================"
+echo
+echo "Project Name:"
+echo "  $ProjectName"
+echo
+echo "Virtual Environment:"
+echo "  .venvs/$ProjectName"
+echo
+echo "Activate Later:"
+echo "  source .venvs/$ProjectName/bin/activate"
+echo
+echo "Run Development Server:"
+echo "  cd $ProjectName"
+echo "  python manage.py runserver"
+echo
+echo "Generated Structure:"
+echo
+tree . 2>/dev/null || true
+echo
+echo "Happy Coding! 🚀"
